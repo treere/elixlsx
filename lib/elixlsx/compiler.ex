@@ -25,6 +25,10 @@ defmodule Elixlsx.Compiler do
     {Enum.reverse(sheetCompInfos), nextrID}
   end
 
+  def compinfo_cell_pass_value(wci, {:link, {_url, value}}) do
+    compinfo_cell_pass_value(wci, value)
+  end
+
   def compinfo_cell_pass_value(wci, value) do
     cond do
       is_binary(value) && XML.valid?(value) ->

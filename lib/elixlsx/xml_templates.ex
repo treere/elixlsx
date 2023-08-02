@@ -182,9 +182,9 @@ defmodule Elixlsx.XMLTemplates do
       {:formula, x, opts} when is_list(opts) ->
         {:formula, x, opts}
 
-      {:link, {_url, _name}} ->
-        # TODO(treere): handle url here
-        {:empty, :empty}
+      {:link, {_url, name}} ->
+        id = StringDB.get_id(wci.stringdb, name)
+        {"s", to_string(id)}
 
       x when is_number(x) ->
         {"n", to_string(x)}
@@ -209,7 +209,7 @@ defmodule Elixlsx.XMLTemplates do
       :empty ->
         {:empty, :empty}
 
-      true ->
+      _ ->
         :error
     end
   end
