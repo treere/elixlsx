@@ -4,6 +4,7 @@ defmodule Elixlsx.XMLTemplates do
   alias Elixlsx.Compiler.StringDB
   alias Elixlsx.Compiler.FontDB
   alias Elixlsx.Compiler.FillDB
+  alias Elixlsx.Compiler.LinkDB
   alias Elixlsx.Compiler.SheetCompInfo
   alias Elixlsx.Compiler.NumFmtDB
   alias Elixlsx.Compiler.BorderStyleDB
@@ -154,6 +155,8 @@ defmodule Elixlsx.XMLTemplates do
     ~S"""
     <?xml version="1.0" encoding="UTF-8"?>
     <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+    <Default Extension="xml" ContentType="application/xml"/>
     <Override PartName="/_rels/.rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
     <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
     <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
@@ -512,12 +515,36 @@ defmodule Elixlsx.XMLTemplates do
       ~S"""
       </sheetData>
       """ <>
+      xl_make_hyperlinks(sheet.rows, sci) <>
       xl_merge_cells(sheet.merge_cells) <>
       make_data_validations(sheet.data_validations) <>
       """
       <pageMargins left="0.75" right="0.75" top="1" bottom="1.0" header="0.5" footer="0.5"/>
       </worksheet>
       """
+  end
+
+  defp xl_make_hyperlinks(rows, sci) do
+    hyperlinks =
+      rows
+      |> Enum.with_index()
+      |> Enum.map(fn {row, rowidx} ->
+        row
+        |> Enum.with_index()
+        |> Enum.map(fn
+          {[{:link, {url, _}} | _], colidx} ->
+            """
+            <hyperlink ref="#{U.to_excel_coords(rowidx + 1, colidx + 1)}" r:id="#{LinkDB.get_id(sci.linkdb, url)}" display="#{url}"/>
+            """
+
+          _ ->
+            ""
+        end)
+        |> Enum.join("")
+      end)
+      |> Enum.join("")
+
+    "<hyperlinks>#{hyperlinks}</hyperlinks>"
   end
 
   defp make_sheet_show_grid(sheet) do
@@ -763,6 +790,23 @@ defmodule Elixlsx.XMLTemplates do
         #{make_cellxfs(cell_xfs, wci)}
       </cellXfs>
     </styleSheet>
+    """
+  end
+
+  def make_sheet_rels(%SheetCompInfo{linkdb: %{element_count: 0}}), do: ""
+
+  def make_sheet_rels(%SheetCompInfo{linkdb: %{links: links}}) do
+    rel =
+      links
+      |> Enum.map(fn {url, id} ->
+        """
+        <Relationship Id="#{id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="#{url}" TargetMode="External"/>
+        """
+      end)
+      |> Enum.join()
+
+    """
+    <?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">#{rel}</Relationships>
     """
   end
 

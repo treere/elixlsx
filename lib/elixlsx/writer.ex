@@ -89,14 +89,22 @@ defmodule Elixlsx.Writer do
     String.to_charlist("xl/worksheets/#{sci.filename}")
   end
 
+  defp sheet_full_ref_path(sci) do
+    String.to_charlist("xl/worksheets/_rels/#{sci.filename}.rels")
+  end
+
   @spec get_xl_worksheets_dir(Workbook.t(), WorkbookCompInfo.t()) :: list(zip_tuple)
   def get_xl_worksheets_dir(data, wci) do
     sheets = data.sheets
 
     Enum.zip(sheets, wci.sheet_info)
-    |> Enum.map(fn {s, sci} ->
-      {sheet_full_path(sci), XMLTemplates.make_sheet(s, wci, sci)}
+    |> Enum.flat_map(fn {s, sci} ->
+      [
+        {sheet_full_ref_path(sci), XMLTemplates.make_sheet_rels(sci)},
+        {sheet_full_path(sci), XMLTemplates.make_sheet(s, wci, sci)}
+      ]
     end)
+    |> Enum.reject(fn {_, text} -> String.length(text) == 0 end)
   end
 
   def get_contentTypes_xml(_, wci) do
