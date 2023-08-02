@@ -64,21 +64,8 @@ defmodule Elixlsx.Writer do
     [get__rels_dotrels(data)]
   end
 
-  @spec get_xl_rels_dir(any, [SheetCompInfo.t()], non_neg_integer) :: list(zip_tuple)
-  def get_xl_rels_dir(_, sheetCompInfos, next_rId) do
-    [
-      {~c"xl/_rels/workbook.xml.rels",
-       ~S"""
-       <?xml version="1.0" encoding="UTF-8"?>
-       <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-         <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-       """ <>
-         XMLTemplates.make_xl_rel_sheets(sheetCompInfos) <>
-         """
-           <Relationship Id="rId#{next_rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
-         </Relationships>
-         """}
-    ]
+  def get_xl_rels_dir(sheetCompInfos, next_rId) do
+    {~c"xl/_rels/workbook.xml.rels", XMLTemplates.make_xl_rels_dir(sheetCompInfos, next_rId)}
   end
 
   @spec get_xl_styles_xml(WorkbookCompInfo.t()) :: zip_tuple
@@ -108,7 +95,7 @@ defmodule Elixlsx.Writer do
 
     Enum.zip(sheets, wci.sheet_info)
     |> Enum.map(fn {s, sci} ->
-      {sheet_full_path(sci), XMLTemplates.make_sheet(s, wci)}
+      {sheet_full_path(sci), XMLTemplates.make_sheet(s, wci, sci)}
     end)
   end
 
@@ -123,9 +110,9 @@ defmodule Elixlsx.Writer do
     [
       get_xl_styles_xml(wci),
       get_xl_sharedStrings_xml(data, wci),
-      get_xl_workbook_xml(data, sheet_comp_infos)
+      get_xl_workbook_xml(data, sheet_comp_infos),
+      get_xl_rels_dir(sheet_comp_infos, next_free_xl_rid)
     ] ++
-      get_xl_rels_dir(data, sheet_comp_infos, next_free_xl_rid) ++
       get_xl_worksheets_dir(data, wci)
   end
 end

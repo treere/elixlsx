@@ -93,6 +93,19 @@ defmodule Elixlsx.XMLTemplates do
     "<Relationship Id=\"#{sheet_comp_info.rId}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/#{sheet_comp_info.filename}\"/>"
   end
 
+  def make_xl_rels_dir(sheetCompInfos, next_rId) do
+    ~S"""
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+    """ <>
+      make_xl_rel_sheets(sheetCompInfos) <>
+      """
+        <Relationship Id="rId#{next_rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+      </Relationships>
+      """
+  end
+
   @spec make_xl_rel_sheets(nonempty_list(SheetCompInfo.t())) :: String.t()
   def make_xl_rel_sheets(sheet_comp_infos) do
     Enum.map_join(sheet_comp_infos, &make_xl_rel_sheet/1)
@@ -461,11 +474,10 @@ defmodule Elixlsx.XMLTemplates do
     end
   end
 
-  @spec make_sheet(Sheet.t(), WorkbookCompInfo.t()) :: String.t()
   @doc ~S"""
   Returns the XML content for single sheet.
   """
-  def make_sheet(sheet, wci) do
+  def make_sheet(sheet, wci, sci) do
     grouping_info = get_grouping_info(sheet.group_rows)
 
     ~S"""
