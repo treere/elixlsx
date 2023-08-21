@@ -543,8 +543,13 @@ defmodule Elixlsx.XMLTemplates do
         |> Enum.join("")
       end)
       |> Enum.join("")
+      |> String.trim()
 
-    "<hyperlinks>#{hyperlinks}</hyperlinks>"
+    if hyperlinks == "" do
+      ""
+    else
+      "<hyperlinks>#{hyperlinks}</hyperlinks>"
+    end
   end
 
   defp make_sheet_show_grid(sheet) do
